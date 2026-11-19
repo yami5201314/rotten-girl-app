@@ -11,7 +11,7 @@ APPLE="$ROOT/src-tauri/gen/apple"
 LOG="$ROOT/tauri-ios-session.log"
 OPTIONS="$APPLE/.tauri/cli-options-server.json"
 
-pnpm tauri ios build --open --ci >"$LOG" 2>&1 &
+pnpm tauri ios build --open --ci --features custom-protocol >"$LOG" 2>&1 &
 SESSION=$!
 trap 'kill "$SESSION" 2>/dev/null || true; echo "--- tauri session log ---"; cat "$LOG"' EXIT
 
