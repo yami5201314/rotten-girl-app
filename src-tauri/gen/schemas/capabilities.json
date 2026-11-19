@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"只授予 App 内置页面核心事件能力；业务命令 api_request 为自定义命令，不需要插件权限。不加载远程页面。","local":true,"windows":["main"],"permissions":["core:default"]}}
