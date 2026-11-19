@@ -62,9 +62,11 @@ jobs:
         with:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
-      - run: pnpm tauri android build --apk --target aarch64 --target x86_64
-        env:
-          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+      # env 上下文读不到 runner 的系统变量，在 shell 里取预装 NDK
+      - run: |
+          export NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_HOME/ndk/$(ls "$ANDROID_HOME/ndk" | sort -V | tail -n1)}"
+          echo "NDK_HOME=$NDK_HOME"
+          pnpm tauri android build --apk --target aarch64 --target x86_64
 
   ios:
     needs: web
@@ -85,11 +87,6 @@ jobs:
         with:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
-      # iOS 工程未入库，CI 现生成；tauri ios build 强制要求开发团队签名，改用 xcodebuild 关闭签名只验证能编译
+      # iOS 工程未入库，CI 现生成；只验证能编译出未签名 IPA，公开仓库不上传产物
       - run: pnpm tauri ios init --ci
-      - name: build (unsigned)
-        run: |
-          set -o pipefail
-          xcodebuild -project src-tauri/gen/apple/rotten-girl-app.xcodeproj -scheme rotten-girl-app_iOS \
-            -sdk iphoneos -configuration release -destination 'generic/platform=iOS' \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= build
+      - run: bash scripts/ios-unsigned.sh build/rotten-girl-ios-unsigned.ipa
