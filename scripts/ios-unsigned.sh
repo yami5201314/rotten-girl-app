@@ -33,9 +33,10 @@ xcodebuild build \
 APP="$(ls -d "$ROOT"/build/ios/Build/Products/release-iphoneos/*.app | head -n1)"
 BIN="$APP/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
 file "$BIN" | grep -q 'arm64'
-# 防止把指向开发服务器的调试包当成产物
-if strings "$BIN" | grep -F 'localhost:1420' >/dev/null; then
-  echo "产物指向开发服务器，拒绝打包" >&2
+# 生产包必须内嵌前端资源（资源表以路径为键明文存放）；没有则说明是连开发服务器的调试包
+ASSET="$(basename "$(ls "$ROOT"/dist/assets/index-*.js | head -n1)")"
+if ! strings "$BIN" | grep -F "/assets/$ASSET" >/dev/null; then
+  echo "产物未内嵌前端资源 $ASSET，拒绝打包" >&2
   exit 1
 fi
 
