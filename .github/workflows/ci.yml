@@ -54,8 +54,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager "ndk;27.2.12479018"
+      # ubuntu runner 已预装 Android SDK 与 NDK（ANDROID_HOME / ANDROID_NDK_LATEST_HOME）
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,x86_64-linux-android
@@ -65,7 +64,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm tauri android build --apk --target aarch64 --target x86_64
         env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
 
   ios:
     needs: web
@@ -86,12 +85,11 @@ jobs:
         with:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
-      # iOS 工程未入库，CI 现生成；只验证能编译，不签名不导出
+      # iOS 工程未入库，CI 现生成；tauri ios build 强制要求开发团队签名，改用 xcodebuild 关闭签名只验证能编译
       - run: pnpm tauri ios init --ci
       - name: build (unsigned)
         run: |
-          pnpm tauri ios build --ci --target aarch64 -- --no-sign 2>&1 | tee build.log || {
-            echo '::warning::tauri ios build 未支持跳过签名，改用 xcodebuild 直接编译'
-            xcodebuild -project src-tauri/gen/apple/*.xcodeproj -scheme "$(ls src-tauri/gen/apple | grep xcodeproj | sed 's/.xcodeproj//')_iOS" \
-              -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-          }
+          set -o pipefail
+          xcodebuild -project src-tauri/gen/apple/rotten-girl-app.xcodeproj -scheme rotten-girl-app_iOS \
+            -sdk iphoneos -configuration release -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= build
